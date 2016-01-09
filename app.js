@@ -129,12 +129,12 @@ slack.on('message', function(message)
         var fuzzynames = ParseMessage(message.text.toLowerCase());
         if(fuzzynames)
         {
-            var response = "";
             var channel = slack.getChannelGroupOrDMByID(message.channel);
 
             for(var i = 0; i < fuzzynames.length; ++i)
             {
-                fuzzyname = fuzzynames[i];
+                var response = "";
+                var fuzzyname = fuzzynames[i];
                 var result = FindBestNameMatch(fuzzyname);
                 var card = result.card;
                 var exactmatch = result.exactmatch;
