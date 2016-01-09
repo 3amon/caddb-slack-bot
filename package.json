@@ -1,6 +1,6 @@
 {
   "name": "carddb-slack-bot",
-  "version" : "0.1",
+  "version" : "0.1.0",
   "description" : "A slack bot for looking up cards on netrunnerdb.com and thronesdb.com",
   "author": {
     "name": "Eamon White",
