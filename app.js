@@ -3,24 +3,48 @@ var request = require('request');
 var fuzzy = require('fuzzy');
 var config = require('./config.json');
 
-
 slackToken = config.SLACK_BOT_TOKEN;
 carddburl = config.CARD_DB_URL;
 autoReconnect = true;
 autoMark = true;
 
-request(carddburl, function (error, response, body) {
-  if (!error && response.statusCode == 200) {
+function ProcessCards(body)
+{
     cards = JSON.parse(body);
     cardmap = {};
     cardnames = [];
     for(var i = 0; i < cards.length; ++i)
     {
-        cardmap[cards[i].name] = cards[i];
-        cardnames.push(cards[i].name);
+        // For some reason netrunnerdb is calling the name of the card "title"
+        // and thronesdb is calling it name... oh well
+        var cardname = cards[i].name;
+        if(! cardname)
+        {
+            cardname = cards[i].title;
+        }
+        cardmap[cardname] = cards[i];
+        cardnames.push(cardname);
     }
-    console.log("Built card list!")
-  }
+    console.log("Built card list!");
+}
+
+request(carddburl + "/api/public/cards", function (error, response, body) 
+{
+    if (!error && response.statusCode == 200) 
+    {
+        ProcessCards(body);
+    }
+    else
+    {
+        // For some reason the relative urls are also different... oh well
+        request(carddburl + "/api/cards", function (error, response, body) 
+        {
+            if (!error && response.statusCode == 200) 
+            {
+                ProcessCards(body);
+            }
+        });
+    }
 });
 
 slack = new Slack(slackToken, autoReconnect, autoMark);
@@ -61,7 +85,7 @@ slack.on('message', function(message)
                 }
                 if(cardname in cardmap)
                 {
-                    channel.send("http://thronesdb.com/" + cardmap[cardname].imagesrc);           
+                    channel.send(carddburl + cardmap[cardname].imagesrc);           
                 }
                 else
                 {
