@@ -8,24 +8,92 @@ carddburl = config.CARD_DB_URL;
 autoReconnect = true;
 autoMark = true;
 
+function BuildAcronym(name)
+{
+    var result = "";
+    var strings = name.split(" ");
+    for(var i = 0; i < strings.length; ++i)
+    {
+        result += strings[i][0];
+    }
+
+    return result;
+}
+
 function ProcessCards(body)
 {
-    cards = JSON.parse(body);
+    var cards = JSON.parse(body);
     cardmap = {};
     cardnames = [];
+    acronymMap = {};
     for(var i = 0; i < cards.length; ++i)
     {
-        // For some reason netrunnerdb is calling the name of the card "title"
-        // and thronesdb is calling it name... oh well
         var cardname = cards[i].name;
-        if(! cardname)
+        // For some reason netrunnerdb is calling the name of the card "title"
+        // and thronesdb is calling it name... oh well. Fixing that...
+        if(!cardname)
         {
             cardname = cards[i].title;
+            cards[i].name = cards[i].title;
         }
+        // No need to be be pedantic about casing here Stannis
+        // We will still have the name in the object itself
+        cardname = cardname.toLowerCase();
         cardmap[cardname] = cards[i];
+        var acronym = BuildAcronym(cardname);
+        if(acronym && acronym.length > 1)
+        {
+            acronymMap[acronym] = cards[i];
+        }
         cardnames.push(cardname);
     }
     console.log("Built card list!");
+}
+
+function FindBestNameMatch(fuzzyname)
+{
+    var result = {};
+    result.exactmatch = false;
+    result.card = null;
+    var matches = fuzzy.filter(fuzzyname, cardnames);
+
+    // If it's a case, insenstive exact match of a card, obviously return that
+    if (fuzzyname in cardmap)
+    {
+        result.exactmatch = true;
+        result.card = cardmap[fuzzyname];
+        console.log("Found via case insensitive exact match!")
+    }
+    else if(fuzzyname in acronymMap)
+    {
+        result.card = acronymMap[fuzzyname];
+        console.log("Found in the acronym map!");
+    }
+    else if(matches.length > 0)
+    {
+        result.card = cardmap[matches[0].original];
+        console.log("Found via fuzzy search!");
+    }
+
+    return result;
+}
+
+function ParseMessage(message)
+{
+    var matches = message.match(/\[.*?\]/g);
+
+    // names from slack message. we will fuzzy match them later
+    var matcheswithoutbrackets = [];
+    if(matches)
+    {
+        // pull off the []
+        for(var i = 0; i < matches.length; ++i)
+        {
+            matcheswithoutbrackets.push(matches[i].substring(1, matches[i].length - 1));
+        }
+    }
+
+    return matcheswithoutbrackets;
 }
 
 request(carddburl + "/api/public/cards", function (error, response, body) 
@@ -58,42 +126,37 @@ slack.on('message', function(message)
 { 
     if (message.type = 'message' && message.text)
     {
-        var channel = slack.getChannelGroupOrDMByID(message.channel);
-        var matches = message.text.match(/\[.*?\]/g);
-
-        // names from slack message. we will fuzzy match them later
-        fuzzynames = [];
-        if(matches)
+        var fuzzynames = ParseMessage(message.text.toLowerCase());
+        if(fuzzynames)
         {
-            // pull off the []
-            for(var i = 0; i < matches.length; ++i)
-            {
-                fuzzynames.push(matches[i].substring(1, matches[i].length - 1));
-            }
-        }
+            var response = "";
+            var channel = slack.getChannelGroupOrDMByID(message.channel);
 
-        for(var i = 0; i < fuzzynames.length; ++i)
-        {
-            fuzzyname = fuzzynames[i];
-            matches = fuzzy.filter(fuzzyname, cardnames);
-            if(matches.length > 0)
+            for(var i = 0; i < fuzzynames.length; ++i)
             {
-                cardname = matches[0].original;
-                if (cardname != fuzzyname)
+                fuzzyname = fuzzynames[i];
+                var result = FindBestNameMatch(fuzzyname);
+                var card = result.card;
+                var exactmatch = result.exactmatch;
+                if(card)
                 {
-                    channel.send("I think you mean " + cardname)
-                }
-                if(cardname in cardmap)
-                {
-                    channel.send(carddburl + cardmap[cardname].imagesrc);           
+                    if (!exactmatch)
+                    {
+                        response += "I think you mean " + card.name + '\n';
+                    }
+                    response += carddburl + card.imagesrc;
                 }
                 else
                 {
-                    console.log(cardname, "not found!");
+                    response = fuzzyname + " not found!";
                 }     
+
+                if(response.length > 0)
+                {
+                    channel.send(response);
+                } 
             }
         }
-   
     }
 });
 
