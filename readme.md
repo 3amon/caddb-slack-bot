@@ -10,7 +10,7 @@ This is a simple bot that sits in a slack channel and will look up card informat
 
 # Todo
 * Add a better channel message (than just linking to the card's picture).
-* Better fuzzy search. Prioritize acronyms.
+* Better fuzzy search. Add remove article (a, an, the) case.
 
 # License
 Copyright (c) 2016 Eamon White Licensed under the MIT license.
