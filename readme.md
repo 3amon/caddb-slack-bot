@@ -2,6 +2,7 @@
 This is a simple bot that sits in a slack channel and will look up card information for either Android: Netrunner and A Game of Thrones (depending on configuration).
 
 # Usage
+To use this bot you will need a nodejs server and git to clone this repo.
 1. From this project's directory type: npm install
 2. Add a slack bot to your server.
 3. Edit the config.json so that CARD_DB_URL is set to http://netrunnerdb.com or http://thronesdb.com.
