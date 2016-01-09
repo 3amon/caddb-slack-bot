@@ -1,13 +1,15 @@
 Slack = require('slack-client');
 var request = require('request');
 var fuzzy = require('fuzzy');
+var config = require('./config.json');
 
 
-slackToken = process.env.SLACK_BOT_THRONESDB_TOKEN;
+slackToken = config.SLACK_BOT_TOKEN;
+carddburl = config.CARD_DB_URL;
 autoReconnect = true;
 autoMark = true;
 
-request('http://thronesdb.com/api/public/cards/', function (error, response, body) {
+request(carddburl, function (error, response, body) {
   if (!error && response.statusCode == 200) {
     cards = JSON.parse(body);
     cardmap = {};
