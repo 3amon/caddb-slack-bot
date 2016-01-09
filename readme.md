@@ -4,7 +4,7 @@ This is a simple bot that sits in a slack channel and will look up card informat
 # Usage
 1. From this project's directory type: npm install
 2. Add a slack bot to your server.
-3. Set the environment variable SLACK_BOT_THRONESDB_TOKEN to be your slack bot's API key.
+3. Edit the config.json file to point at either website and add your slack bot's API key.
 4. From this project's directory type: node app.js
 
 # Todo
