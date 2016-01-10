@@ -1,14 +1,15 @@
-Slack = require('slack-client');
+var Slack = require('slack-client');
 var request = require('request');
 var fuzzy = require('fuzzy');
 var config = require('./config.json');
+var url = require('url');
 
 slackToken = config.SLACK_BOT_TOKEN;
 carddburl = config.CARD_DB_URL;
 autoReconnect = true;
 autoMark = true;
 
-function BuildAcronym(name)
+function buildAcronym(name)
 {
     var result = "";
     var strings = name.split(" ");
@@ -20,12 +21,13 @@ function BuildAcronym(name)
     return result;
 }
 
-function ProcessCards(body)
+cardmap = {};
+cardnames = [];
+acronymMap = {};
+
+function processCards(body)
 {
     var cards = JSON.parse(body);
-    cardmap = {};
-    cardnames = [];
-    acronymMap = {};
     for(var i = 0; i < cards.length; ++i)
     {
         var cardname = cards[i].name;
@@ -40,7 +42,7 @@ function ProcessCards(body)
         // We will still have the name in the object itself
         cardname = cardname.toLowerCase();
         cardmap[cardname] = cards[i];
-        var acronym = BuildAcronym(cardname);
+        var acronym = buildAcronym(cardname);
         if(acronym && acronym.length > 1)
         {
             acronymMap[acronym] = cards[i];
@@ -50,7 +52,7 @@ function ProcessCards(body)
     console.log("Built card list!");
 }
 
-function FindBestNameMatch(fuzzyname)
+function findBestNameMatch(fuzzyname)
 {
     var result = {};
     result.exactmatch = false;
@@ -78,7 +80,7 @@ function FindBestNameMatch(fuzzyname)
     return result;
 }
 
-function ParseMessage(message)
+function parseMessage(message)
 {
     var matches = message.match(/\[.*?\]/g);
 
@@ -96,20 +98,36 @@ function ParseMessage(message)
     return matcheswithoutbrackets;
 }
 
-request(carddburl + "/api/public/cards", function (error, response, body) 
+function buildPost(card, exactmatch)
+{
+    var post = {};
+    if (!exactmatch)
+    {
+        post.pretext = "I think you mean " + card.name + '\n';
+    }
+    post.title = card.name;
+    post.title_link = card.url;
+    post.image_url = carddburl + card.imagesrc;
+    post.author_name = carddburl;
+    post.author_link = carddburl;
+    post.color = "#000000";
+    return post;
+}
+
+request(url.resolve(carddburl, "/api/public/cards"), function (error, response, body)
 {
     if (!error && response.statusCode == 200) 
     {
-        ProcessCards(body);
+        processCards(body);
     }
     else
     {
         // For some reason the relative urls are also different... oh well
-        request(carddburl + "/api/cards", function (error, response, body) 
+        request(url.resolve(carddburl, "/api/cards"), function (error, response, body)
         {
             if (!error && response.statusCode == 200) 
             {
-                ProcessCards(body);
+                processCards(body);
             }
         });
     }
@@ -126,34 +144,33 @@ slack.on('message', function(message)
 { 
     if (message.type = 'message' && message.text)
     {
-        var fuzzynames = ParseMessage(message.text.toLowerCase());
+        var fuzzynames = parseMessage(message.text.toLowerCase());
         if(fuzzynames)
         {
             var channel = slack.getChannelGroupOrDMByID(message.channel);
 
             for(var i = 0; i < fuzzynames.length; ++i)
             {
-                var response = "";
+                var response = {};
+                response.username = "Cardbot";
                 var fuzzyname = fuzzynames[i];
-                var result = FindBestNameMatch(fuzzyname);
+                var result = findBestNameMatch(fuzzyname);
                 var card = result.card;
                 var exactmatch = result.exactmatch;
                 if(card)
                 {
-                    if (!exactmatch)
-                    {
-                        response += "I think you mean " + card.name + '\n';
-                    }
-                    response += carddburl + card.imagesrc;
+                    response.attachments = [];
+                    var post = buildPost(card, exactmatch);
+                    response.attachments = [post];
                 }
                 else
                 {
-                    response = fuzzyname + " not found!";
+                    response.text = fuzzyname + " not found!";
                 }     
 
-                if(response.length > 0)
+                if(response)
                 {
-                    channel.send(response);
+                    channel.postMessage(response);
                 } 
             }
         }
@@ -162,7 +179,7 @@ slack.on('message', function(message)
 
 slack.on('error', function(err)
 {
-    console.error("Error " + err);
+    console.error("Error ", err);
 });
 
 slack.login();
