@@ -11,7 +11,7 @@ To use this bot you will need a nodejs server and git to clone this repo.
 5. From this project's directory type: node app.js
 
 # Usage
-Simply type the name of a card surrounded by square brackets anywhere in your message and the bot will attempt to look it up (ie \[ttidfl\]. Acronyms and partial matches work! 
+Simply type the name of a card surrounded by square brackets anywhere in your message and the bot will attempt to look it up (ie \[ttidfl\]). Acronyms and partial matches work! 
 
 # Todo
 
