@@ -244,7 +244,8 @@ slack.on('message', function(message)
         var fuzzynames = parseMessage(message.text.toLowerCase());
 
         var response = {};
-        response.username = "Cardbot";
+        response.username = config.BOT_USERNAME;
+        response.icon_emoji = config.BOT_EMOJI;
         if(message.text.startsWith('draw'))
         {
             var channel = slack.getChannelGroupOrDMByID(message.channel);
