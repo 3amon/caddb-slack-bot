@@ -3,6 +3,7 @@ var request = require('request');
 var fuzzy = require('fuzzy');
 var config = require('./config.json');
 var url = require('url');
+var localcards = require('./cards.json');
 
 slackToken = config.SLACK_BOT_TOKEN;
 carddburl = config.CARD_DB_URL;
@@ -25,9 +26,8 @@ cardmap = {};
 cardnames = [];
 acronymMap = {};
 
-function processCards(body)
+function addCardsToMap(cards)
 {
-    var cards = JSON.parse(body);
     for(var i = 0; i < cards.length; ++i)
     {
         var cardname = cards[i].name;
@@ -49,6 +49,24 @@ function processCards(body)
         }
         cardnames.push(cardname);
     }
+}
+
+function processCards(body)
+{
+    var webcards = JSON.parse(body);
+
+    console.log(localcards.length + " local cards added.");
+
+    // we will fix the urls in webcards
+    for(var i = 0; i < webcards.length; ++ i)
+    {
+        webcards[i].imagesrc = url.resolve(carddburl, webcards[i].imagesrc);
+    }
+
+    //addCardsToMap will not override so it will prioritize web cards
+    addCardsToMap(webcards);
+    addCardsToMap(localcards);
+
     console.log("Built card list!");
 }
 
@@ -107,10 +125,13 @@ function buildPost(card, exactmatch)
     }
     post.title = card.name;
     post.title_link = card.url;
-    post.image_url = carddburl + card.imagesrc;
-    post.author_name = carddburl;
-    post.author_link = carddburl;
+    post.image_url = card.imagesrc;
     post.color = "#000000";
+    post.mrkdwn_in = ["text"];
+    if(card.use_text)
+    {
+        post.text = card.text;
+    }
     return post;
 }
 
@@ -170,6 +191,7 @@ slack.on('message', function(message)
 
                 if(response)
                 {
+                    console.log(response);
                     channel.postMessage(response);
                 } 
             }
