@@ -1,6 +1,6 @@
 {
-	"SLACK_BOT_TOKEN": "XXX",
-	"CARD_DB_URL": "XXX",
-	"BOT_USERNAME": "Cardbot",
-	"BOT_EMOJI": ""
+	"SLACK_BOT_TOKEN": "xoxb-18009930902-FOyXsfLwpPS29KVpzS6HYFZa",
+	"CARD_DB_URL": "http://thronesdb.com/",
+	"BOT_USERNAME": "Test-Card-Bot-Eamon-Dev",
+	"BOT_EMOJI": ":joystick:"
 }
