@@ -13,27 +13,26 @@ slack.on('open', function()
 });
 
 slack.on('message', function(message)
-{ 
+{
     if (message.type = 'message' && message.text)
     {
-        var post = false;
-        var response = {};
+        var result = {};
 
-        for(var i = 0; i < msgHandlers.length && !post; ++i)
+        for(var i = 0; i < msgHandlers.length && !result.handled; ++i)
         {
-            if(msgHandlers[i].canHandle(message.text))
-            {
-                response = msgHandlers[i].buildPost(message.text);
-                post = true;
-            }
+            result = msgHandlers[i].handleMessage(message.text, message.getChannelType());
         }
 
-        if (post) {
+        if(result.handled)
+        {
+            console.log(result);
+        }
+
+        if (result.post) {
             var channel = slack.getChannelGroupOrDMByID(message.channel);
-            response.username = config.BOT_USERNAME;
-            response.icon_emoji = config.BOT_EMOJI;
-            console.log(response);
-            channel.postMessage(response);
+            result.post.username = config.BOT_USERNAME;
+            result.post.icon_emoji = config.BOT_EMOJI;
+            channel.postMessage(result.post);
         }
     }
 });
