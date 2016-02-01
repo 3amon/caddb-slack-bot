@@ -1,6 +1,5 @@
 {
 	"SLACK_BOT_TOKEN": "",
-	"CARD_DB_URL": "http://thronesdb.com/",
 	"BOT_USERNAME": "CardBot",
 	"BOT_EMOJI": ""
 }
