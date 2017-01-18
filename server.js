@@ -1,18 +1,23 @@
 var express = require('express');
 var request = require('request');
 var Sequelize = require('sequelize');
-var secrets = require('./secrets.json');
 var url = require('url');
 var app = express();
-var config = require('./config.json');
 var carddb = require('./lib/carddb');
 var cardmath = require('./lib/cardmathlib');
-
+var secrets = require('./secrets.json');
 var bodyParser = require('body-parser');
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({extended: true}));
 
 var msgHandlers = [carddb, cardmath];
+
+var sequelize = new Sequelize(secrets.POSTGRES_LOGIN);
+
+var Bot = sequelize.define('bot', {
+    team_id: Sequelize.STRING,
+    bot_access_token: Sequelize.STRING
+});
 
 function GetBotResponse(message)
 {
@@ -29,7 +34,6 @@ function GetBotResponse(message)
 }
 
 app.get('/thronesbot/oauth/', function (req, res) {
-    console.log(req.query);
     request({
         url: 'https://slack.com/api/oauth.access',
         method: 'GET',
@@ -39,15 +43,30 @@ app.get('/thronesbot/oauth/', function (req, res) {
             code : req.query.code
         }},
         function(error, response, body){
-            console.log(body);
+            sequelize.sync().then(function() {
+                var auth = JSON.parse(body);
+                Bot.destroy({
+                    where: {
+                        team_id: auth.team_id
+                    }
+                }).then(function() {
+                    return Bot.create({
+                        bot_access_token: auth.bot.bot_access_token,
+                        team_id: auth.team_id
+                })})});
         });
     res.send();
 });
 
 app.post('/thronesbot', function (req, res) {
-
-    if (req.body.type == 'event_callback') {
-        if(req.body.event.bot_id != 'U3PARD3T9') {
+    console.log(req.body);
+    if (req.body.token == secrets.SLACK_VERIFICATION_TOKEN &&
+        req.body.type == 'event_callback') {
+        Bot.findOne({
+            where: {
+                team_id: req.body.team_id
+            }
+        }).then(function(bot) {
             var response = GetBotResponse(req.body.event.text);
             if (response)
             {
@@ -55,7 +74,7 @@ app.post('/thronesbot', function (req, res) {
                         url: 'https://slack.com/api/chat.postMessage',
                         method: 'GET',
                         qs: {
-                            token: "xoxb-125365445927-KkbLkr4oGUotkpZrfhJg7Xso",
+                            token: bot.get('bot_access_token'),
                             channel: req.body.event.channel,
                             attachments: JSON.stringify(response.attachments),
                             text: response.text,
@@ -65,8 +84,8 @@ app.post('/thronesbot', function (req, res) {
                     function (error, response, body) {
                     });
             }
-        }
-        res.send();
+            res.send();
+        });
     }
     else if (req.body.type == 'url_verification') {
         res.send(req.body.challenge);
