@@ -1,6 +1,7 @@
 var express = require('express');
 var request = require('request');
 var Sequelize = require('sequelize');
+var secrets = require('./secrets.json');
 var url = require('url');
 var app = express();
 var config = require('./config.json');
@@ -33,8 +34,8 @@ app.get('/thronesbot/oauth/', function (req, res) {
         url: 'https://slack.com/api/oauth.access',
         method: 'GET',
         qs: {
-            client_id : "4552245108.91769218487",
-            client_secret : "5b1c4a4c7d20bd81322a1b7adeec8a06",
+            client_id : secrets.SLACK_CLIENT_ID,
+            client_secret : secrets.SLACK_CLIENT_SECRET,
             code : req.query.code
         }},
         function(error, response, body){
